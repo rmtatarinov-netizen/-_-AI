@@ -1,0 +1,21 @@
+# Секреты — никогда не коммитить
+.env
+
+# Логи (могут содержать токены/трассировки)
+bot.log
+bot.log.*
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# IDE и служебные файлы
+.idea/
+.vscode/
+*.tmp
+Thumbs.db
+.DS_Store
