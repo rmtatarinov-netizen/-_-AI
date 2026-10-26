@@ -71,8 +71,8 @@ TELEGRAM_PROXY=socks5h://127.0.0.1:1080
 
 | Провайдер | Base URL | Модель | Ключ в .env |
 |---|---|---|---|
-| `proxyapi` | https://api.proxyapi.ru/v1 | openai/gpt-5-mini-2025-08-07 | `PROXYAPI_API_KEY` |
-| `genapi` | https://proxy.gen-api.ru/v1 | gpt-4.1-mini | `GENAPI_API_KEY` |
+| `proxyapi` | https://api.proxyapi.ru/v1 | openai/gpt-4o-mini | `PROXYAPI_API_KEY` |
+| `genapi` | https://proxy.gen-api.ru/v1 | gpt-4o-mini | `GENAPI_API_KEY` |
 
 Как это работает:
 

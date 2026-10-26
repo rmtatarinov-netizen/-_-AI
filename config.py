@@ -15,16 +15,16 @@ PROVIDERS = {
     "proxyapi": {
         "base_url": "https://api.proxyapi.ru/v1",
         "key_env": "PROXYAPI_API_KEY",
-        "model": "openai/gpt-5-mini-2025-08-07",
+        "model": "openai/gpt-4o-mini",
         "token_param": "max_completion_tokens",
-        "supports_reasoning": True,
-        "supports_temperature": False,
+        "supports_reasoning": False,
+        "supports_temperature": True,
     },
     "genapi": {
         # OpenAI-совместимый SDK сам допишет /chat/completions к base_url
         "base_url": "https://proxy.gen-api.ru/v1",
         "key_env": "GENAPI_API_KEY",
-        "model": "gpt-4.1-mini",
+        "model": "gpt-4o-mini",
         "token_param": "max_tokens",
         "supports_reasoning": False,
         "supports_temperature": True,

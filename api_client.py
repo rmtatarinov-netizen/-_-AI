@@ -62,6 +62,11 @@ def get_ai_response(provider: str, messages: list[dict]) -> str:
         raise ApiError("Сервер API недоступен. Попробуйте позже") from error
     except openai.APIStatusError as error:
         logger.error("API (%s) вернул статус %s: %s", provider, error.status_code, error.body)
+        if "model" in str(error.body).lower():
+            logger.error(
+                "Похоже на ошибку имени модели. Доступные модели: GET %s/models",
+                settings["base_url"],
+            )
         raise ApiError("Ошибка API (" + str(error.status_code) + "). Детали в логе") from error
     except Exception as error:
         logger.exception("Неизвестная ошибка при запросе к API (%s)", provider)
