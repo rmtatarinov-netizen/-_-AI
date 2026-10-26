@@ -15,7 +15,7 @@ PROVIDERS = {
     "proxyapi": {
         "base_url": "https://api.proxyapi.ru/v1",
         "key_env": "PROXYAPI_API_KEY",
-        "model": "openai/gpt-4o-mini",
+        "model": "gpt-4o-mini",
         "token_param": "max_completion_tokens",
         "supports_reasoning": False,
         "supports_temperature": True,
@@ -37,7 +37,7 @@ if DEFAULT_PROVIDER not in PROVIDERS:
 
 MAX_CONTEXT_MESSAGES = 20
 MAX_TOKENS = 1500
-TEMPERATURE = 0.7
+TEMPERATURE = 1
 REASONING_EFFORT = "low"
 
 CLEAR_COMMANDS = {"очистить контекст", "/reset"}
