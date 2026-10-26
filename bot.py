@@ -74,14 +74,17 @@ _providers_list = ", ".join(
     name + " (" + settings["model"] + ")" for name, settings in config.PROVIDERS.items()
 )
 
-HELP_TEXT = (
-    "Привет! Я бот-ассистент.\n\n"
-    "Просто напиши сообщение — я отвечу и запомню контекст диалога.\n"
-    "Фраза «очистить контекст» или команда /reset стирают историю переписки.\n\n"
-    "Доступные провайдеры ИИ: " + _providers_list + ".\n"
-    "Текущий провайдер: /api\n"
-    "Переключение: /api proxyapi или /api genapi"
-)
+def help_text(user_id: int) -> str:
+    current = context_manager.get_provider(user_id)
+    model = config.PROVIDERS[current]["model"]
+    return (
+        "Привет! Я бот-ассистент.\n\n"
+        "Просто напиши сообщение — я отвечу и запомню контекст диалога.\n"
+        "Фраза «очистить контекст» или команда /reset стирают историю переписки.\n\n"
+        "Доступные провайдеры ИИ: " + _providers_list + ".\n"
+        "Текущий провайдер: " + current + " (модель " + model + ").\n"
+        "Переключение: кнопками в /api или командой /api <имя>."
+    )
 
 TG_MAX_LEN = 4096
 
@@ -136,7 +139,7 @@ def switch_provider(user_id: int, name: str) -> tuple[bool, str]:
 
 @bot.message_handler(commands=["start", "help"])
 def cmd_start(message: telebot.types.Message) -> None:
-    send_with_retry(bot.reply_to, message, HELP_TEXT)
+    send_with_retry(bot.reply_to, message, help_text(message.from_user.id))
 
 
 @bot.message_handler(commands=["api"])
