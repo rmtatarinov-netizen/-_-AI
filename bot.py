@@ -100,6 +100,40 @@ def split_text(text: str) -> list[str]:
     return parts
 
 
+def provider_status_text(user_id: int) -> str:
+    current = context_manager.get_provider(user_id)
+    model = config.PROVIDERS[current]["model"]
+    return (
+        "Текущий провайдер: " + current + " (модель " + model + ").\n"
+        "Нажми кнопку ниже или отправь команду /api " + " | /api ".join(config.PROVIDERS) + "."
+    )
+
+
+def provider_keyboard(user_id: int) -> telebot.types.InlineKeyboardMarkup:
+    current = context_manager.get_provider(user_id)
+    keyboard = telebot.types.InlineKeyboardMarkup(row_width=1)
+    for name, settings in config.PROVIDERS.items():
+        label = ("✅ " if name == current else "") + name + " (" + settings["model"] + ")"
+        keyboard.add(telebot.types.InlineKeyboardButton(text=label, callback_data="prov:" + name))
+    return keyboard
+
+
+def switch_provider(user_id: int, name: str) -> tuple[bool, str]:
+    try:
+        settings = config.get_provider(name)
+    except ValueError:
+        logger.info("Запрошен неизвестный провайдер %r (user_id=%s)", name, user_id)
+        return False, "Неизвестный провайдер: " + name + ". Доступные: " + ", ".join(config.PROVIDERS)
+    try:
+        config.get_api_key(name)
+    except RuntimeError as error:
+        logger.error("Переключение %s невозможно: %s", name, error)
+        return False, "Не получилось переключить провайдер: " + str(error)
+    context_manager.set_provider(user_id, name)
+    logger.info("user_id=%s переключён на %s", user_id, name)
+    return True, "Переключено на провайдер " + name + " (модель " + settings["model"] + ")."
+
+
 @bot.message_handler(commands=["start", "help"])
 def cmd_start(message: telebot.types.Message) -> None:
     send_with_retry(bot.reply_to, message, HELP_TEXT)
@@ -108,45 +142,57 @@ def cmd_start(message: telebot.types.Message) -> None:
 @bot.message_handler(commands=["api"])
 def cmd_api(message: telebot.types.Message) -> None:
     user_id = message.from_user.id
+    logger.info("Команда %r от user_id=%s", message.text, user_id)
     args = (message.text or "").split()
 
     if len(args) == 1:
-        current = context_manager.get_provider(user_id)
-        model = config.PROVIDERS[current]["model"]
         send_with_retry(
             bot.reply_to,
             message,
-            "Текущий провайдер: " + current + " (модель " + model + ").\n"
-            "Доступные: " + _providers_list + "\n"
-            "Переключение: /api " + " | /api ".join(config.PROVIDERS),
+            provider_status_text(user_id),
+            reply_markup=provider_keyboard(user_id),
         )
         return
 
-    provider = args[1].lower().split("@")[0]
-    if provider not in config.PROVIDERS:
-        send_with_retry(
-            bot.reply_to,
-            message,
-            "Неизвестный провайдер: " + provider + ". Доступные: " + ", ".join(config.PROVIDERS),
-        )
-        return
-
-    try:
-        config.get_api_key(provider)
-    except RuntimeError as error:
-        logger.error("Переключение /api %s невозможно: %s", provider, error)
-        send_with_retry(bot.reply_to, message, "Не получилось переключить провайдер: " + str(error))
-        return
-
-    context_manager.set_provider(user_id, provider)
-    logger.info("Команда /api %s от user_id=%s", provider, user_id)
-    model = config.PROVIDERS[provider]["model"]
+    name = args[1].lower().split("@")[0]
+    ok, result = switch_provider(user_id, name)
     send_with_retry(
         bot.reply_to,
         message,
-        "Переключено на провайдер " + provider + " (модель " + model + ").\n"
-        "История диалога сохранена, но новые ответы будет генерировать эта модель.",
+        result + "\n\n" + provider_status_text(user_id),
+        reply_markup=provider_keyboard(user_id),
     )
+
+
+@bot.callback_query_handler(func=lambda c: c.data and c.data.startswith("prov:"))
+def cb_provider(callback: telebot.types.CallbackQuery) -> None:
+    name = callback.data.split(":", 1)[1]
+    user_id = callback.from_user.id
+    ok, result = switch_provider(user_id, name)
+    logger.info("Кнопка prov:%s от user_id=%s (ok=%s)", name, user_id, ok)
+    new_text = result + "\n\n" + provider_status_text(user_id)
+    msg = callback.message
+    try:
+        if getattr(msg, "is_editable", False):
+            bot.edit_message_text(
+                new_text,
+                msg.chat.id,
+                msg.message_id,
+                reply_markup=provider_keyboard(user_id),
+            )
+        else:
+            send_with_retry(
+                bot.send_message,
+                msg.chat.id,
+                new_text,
+                reply_markup=provider_keyboard(user_id),
+            )
+    except Exception:
+        logger.exception("Не удалось обновить сообщение с кнопками")
+    try:
+        bot.answer_callback_query(callback.id, "Готово: " + name if ok else result[:120])
+    except Exception:
+        logger.debug("answer_callback_query не доставлен", exc_info=True)
 
 
 @bot.message_handler(commands=["reset"])

@@ -1,11 +1,38 @@
+import json
 import logging
+from pathlib import Path
 
 import config
 
 logger = logging.getLogger(__name__)
 
+_SETTINGS_PATH = Path(__file__).resolve().parent / "user_settings.json"
+
 _context: dict[int, list[dict]] = {}
-_providers: dict[int, str] = {}
+
+
+def _load_providers() -> dict[int, str]:
+    try:
+        data = json.loads(_SETTINGS_PATH.read_text(encoding="utf-8"))
+        return {int(k): str(v) for k, v in data.items()}
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError):
+        logger.exception("Не удалось прочитать user_settings.json, начинаем пусто")
+        return {}
+
+
+def _save_providers() -> None:
+    try:
+        _SETTINGS_PATH.write_text(
+            json.dumps({str(k): v for k, v in _providers.items()}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    except OSError:
+        logger.exception("Не удалось сохранить user_settings.json")
+
+
+_providers: dict[int, str] = _load_providers()
 
 
 def get_provider(user_id: int) -> str:
@@ -15,6 +42,7 @@ def get_provider(user_id: int) -> str:
 def set_provider(user_id: int, provider: str) -> None:
     config.get_provider(provider)  # проверка, что провайдер существует
     _providers[user_id] = provider
+    _save_providers()
     logger.info("user_id=%s переключён на провайдер %s", user_id, provider)
 
 
